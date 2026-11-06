@@ -1,15 +1,15 @@
-# AAYOG_CHUNAV 2.0: Secure Election Management and Online Voting System
+# AAYOG_CHUNAV 3.0: Secure Election Management and Online Voting System
 ## Advanced Computer Networks Project & Prototype Implementation
 
 A practical, robust, and secure **Election Management and Online Voting System** built in **pure C using POSIX TCP Sockets, POSIX Threads (`pthreads`), and OpenSSL**. 
 
-AAYOG_CHUNAV 2.0 upgrades the foundational socket architecture into an enterprise-grade voting platform featuring **TLS 1.2/1.3 encryption, Mutual TLS (mTLS), Salted Two-Factor Authentication (2FA), Strict Ballot Secrecy, IP-based Access Control, Rule-Based Intrusion Detection, Tamper-Evident Hash-Chained Audit Logs, and Certified pure-C PDF/CSV Report Generation**.
+AAYOG_CHUNAV 3.0 upgrades the foundational socket architecture into an enterprise-grade voting platform featuring **TLS 1.2/1.3 encryption, Mutual TLS (mTLS), Salted Two-Factor Authentication (2FA), Strict Ballot Secrecy, IP-based Access Control, Rule-Based Intrusion Detection, Tamper-Evident Hash-Chained Audit Logs, and Certified pure-C PDF/CSV Report Generation**.
 
 Zero Node.js, Python, Java, or third-party web frameworks are used. Everything is implemented directly in C with standard POSIX libraries and OpenSSL.
 
 ---
 
-## 🌟 Key Upgrades in AAYOG_CHUNAV 2.0
+## 🌟 Key Upgrades in AAYOG_CHUNAV 3.0
 
 | Module | Core Features | Security Guarantees |
 | :--- | :--- | :--- |
@@ -30,7 +30,7 @@ Zero Node.js, Python, Java, or third-party web frameworks are used. Everything i
 
 ```
                                       +-------------------------------------------------+
-                                      |     AAYOG_CHUNAV 2.0 DUAL-MODE ENGINE (C)      |
+                                      |     AAYOG_CHUNAV 3.0 DUAL-MODE ENGINE (C)      |
                                       |  - Master Listening Socket: Port 8080           |
                                       |  - OpenSSL TLS 1.2 & 1.3 (server.crt/key)       |
                                       |  - Optional Mutual TLS (mTLS) for Admin Clients |
@@ -90,7 +90,7 @@ Zero Node.js, Python, Java, or third-party web frameworks are used. Everything i
 - When an administrative client presents a verified certificate signed by the Root CA (e.g. `certs/admin_client.crt`), the server extracts the Subject CN (`Chief Election Officer`) and grants administrative access without requiring manual password entry.
 
 ### 3. Strict Ballot Secrecy Architecture
-Traditional voting systems often store `VoterID|CandidateID`, directly violating the secret ballot. AAYOG_CHUNAV 2.0 decouples storage into three isolated layers:
+Traditional voting systems often store `VoterID|CandidateID`, directly violating the secret ballot. AAYOG_CHUNAV 3.0 decouples storage into three isolated layers:
 1. **Voter Roll (`data/voters.txt`)**: Records that a voter has exercised their franchise (`has_voted = 1`, `voted_at = timestamp`), but **never** stores candidate choice.
 2. **Anonymous Ballots (`data/ballots.txt` and `votes.txt`)**: Contains a cryptographically random receipt token (`BLT-<32-hex-chars>`), candidate selection, and station ID, but **never** stores voter ID.
 3. **Receipt Token**: Returned to the voter as proof of ballot submission without disclosing candidate choice to third parties.
@@ -207,10 +207,10 @@ This automatically:
 Expected server startup log:
 ```text
 =================================================================
-   AAYOG_CHUNAV 2.0 - SECURE ONLINE ELECTION MANAGEMENT SYSTEM   
+   AAYOG_CHUNAV 3.0 - SECURE ONLINE ELECTION MANAGEMENT SYSTEM   
    Dual-Protocol Engine: OpenSSL TLS 1.2/1.3 + POSIX TCP Sockets 
 =================================================================
-[INFO] Loaded 99 registered voters into AAYOG_CHUNAV 2.0 registry.
+[INFO] Loaded 99 registered voters into AAYOG_CHUNAV 3.0 registry.
 [SEC INFO] mTLS CA 'certs/ca.crt' loaded. Optional client certificate authentication enabled.
 [SEC INFO] OpenSSL TLS 1.2/1.3 context initialized successfully.
 [SECURITY] TLS 1.2/1.3 encryption enabled with certificate 'certs/server.crt'.
@@ -277,7 +277,7 @@ Tests HTTP endpoints, ID range boundaries (`V101` to `V199`), and CLI concurrenc
 
 ## 🎯 Viva & Evaluation Guide
 
-### Q1: How does AAYOG_CHUNAV 2.0 prevent duplicate voting while guaranteeing ballot secrecy?
+### Q1: How does AAYOG_CHUNAV 3.0 prevent duplicate voting while guaranteeing ballot secrecy?
 **Answer:** The system splits storage into two decoupled structures:
 - `data/voters.txt` marks `has_voted = 1` for the voter ID under a mutex lock, preventing any duplicate submission.
 - `data/ballots.txt` stores only the candidate selection and a random cryptographic receipt token (`BLT-...`). The voter ID is **never** written to `data/ballots.txt`. The voter receives the receipt token for independent auditing, but no record exists that links the voter's identity to their candidate choice.
