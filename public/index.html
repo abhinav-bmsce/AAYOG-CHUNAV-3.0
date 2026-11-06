@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AAYOG_CHUNAV 3.0 - Multi-Election Management & Secure Voting Platform</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="navbar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 11 12 14 22 4"></polyline>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+          </svg>
+        </div>
+        <div>
+          <h1>AAYOG_CHUNAV 3.0</h1>
+          <p class="subtitle">Multi-Election Governance Platform • OpenSSL TLS 1.2/1.3 & POSIX TCP Engine</p>
+        </div>
+      </div>
+      <div class="nav-right">
+        <!-- Election Selector -->
+        <div class="election-selector-group">
+          <span class="icon">🗳️</span>
+          <label for="electionSelect">Election:</label>
+          <select id="electionSelect" onchange="changeElection(this.value)">
+            <option value="1">Loading elections...</option>
+          </select>
+        </div>
+        <div class="server-badge" id="electionStatusBadge">
+          <span class="pulse-dot"></span>
+          <span id="electionStatusText">ACTIVE</span>
+        </div>
+        <a href="/admin.html" class="btn-admin-link">
+          <span class="icon">🛡️</span> Admin Portal
+        </a>
+      </div>
+    </header>
+
+    <!-- Active Election Meta Banner -->
+    <div class="election-meta-card" id="electionMetaCard">
+      <div class="meta-main">
+        <div class="meta-header">
+          <span class="meta-type-tag" id="metaElectionType">GENERAL ELECTION</span>
+          <h2 id="metaElectionTitle">Lok Sabha General Election 2026</h2>
+        </div>
+        <p class="meta-desc" id="metaElectionDesc">National Parliamentary General Election to elect representatives.</p>
+      </div>
+      <div class="meta-details">
+        <div class="meta-detail-item">
+          <span class="detail-label">Status</span>
+          <strong id="metaElectionStatus">ACTIVE</strong>
+        </div>
+        <div class="meta-detail-item">
+          <span class="detail-label">Total Roll</span>
+          <strong id="metaTotalVoters">—</strong>
+        </div>
+        <div class="meta-detail-item">
+          <span class="detail-label">Ballots Cast</span>
+          <strong id="metaTotalVotes">—</strong>
+        </div>
+        <div class="meta-detail-item">
+          <span class="detail-label">Two-Factor Auth</span>
+          <strong id="metaRequireOtp">Required (OTP)</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security & Ballot Secrecy Guarantee Banner -->
+    <div class="security-banner">
+      <div class="sec-item"><span class="sec-icon">🔒</span> <strong>TLS 1.2/1.3 Encryption:</strong> All ballot transmissions encrypted over OpenSSL.</div>
+      <div class="sec-item"><span class="sec-icon">🗳️</span> <strong>Strict Ballot Secrecy:</strong> Zero voter ID to choice linkage. Fully anonymous ballot box.</div>
+      <div class="sec-item"><span class="sec-icon">🔑</span> <strong>Two-Factor Auth:</strong> Cryptographic salted OTP required before ballot submission.</div>
+    </div>
+
+    <!-- Quick Demo Helper Bar -->
+    <div class="quick-test-bar">
+      <span class="label">Quick Voter IDs (Click to populate):</span>
+      <div class="tag-group">
+        <button type="button" class="id-tag" onclick="selectQuickId('V101')">V101</button>
+        <button type="button" class="id-tag" onclick="selectQuickId('V102')">V102</button>
+        <button type="button" class="id-tag" onclick="selectQuickId('V103')">V103</button>
+        <button type="button" class="id-tag" onclick="selectQuickId('V104')">V104</button>
+        <button type="button" class="id-tag" onclick="selectQuickId('V105')">V105</button>
+        <button type="button" class="id-tag" onclick="selectQuickId('V199')">V199</button>
+        <button type="button" class="id-tag invalid" onclick="selectQuickId('V1004')">V1004 (Invalid)</button>
+        <button type="button" class="id-tag invalid" onclick="selectQuickId('V999')">V999 (Invalid)</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Section 1: Candidates -->
+      <section class="section">
+        <div class="section-header">
+          <h2>1. Official Candidates</h2>
+          <span class="badge" id="candSectionBadge">Select One Candidate</span>
+        </div>
+
+        <div class="candidate-grid" id="candidateCards">
+          <!-- Dynamically populated by app.js -->
+        </div>
+      </section>
+
+      <!-- Section 2: Voting Station with 2FA & Ballot Secrecy -->
+      <section class="section voting-station">
+        <div class="section-header">
+          <h2>2. Secure Voting Station</h2>
+          <span class="secure-badge">🔒 2FA Protected • Anonymous Ballot Box</span>
+        </div>
+
+        <form id="voteForm" onsubmit="submitVote(event)">
+          <div class="vote-form-grid">
+            <!-- Step A: Voter ID Verification -->
+            <div class="input-group">
+              <label for="voterIdInput">Step A: Voter Identification (ID):</label>
+              <div class="input-row">
+                <input 
+                  type="text" 
+                  id="voterIdInput" 
+                  placeholder="e.g. V101 (Registered ID)" 
+                  maxlength="32" 
+                  required
+                  autocomplete="off"
+                  oninput="onVoterIdChange()"
+                >
+                <button type="button" class="btn-secondary" id="checkIdBtn" onclick="verifyVoterId()">
+                  Verify & Request OTP
+                </button>
+              </div>
+              <small id="idStatusText" class="status-msg"></small>
+              <div id="boothBadgeContainer" class="booth-badge hidden">
+                <span class="icon">📍</span> Assigned Polling Booth: <strong id="assignedBoothText">—</strong>
+              </div>
+            </div>
+
+            <!-- Step B: Two-Factor Authentication OTP -->
+            <div class="input-group" id="otpGroup" style="display: none;">
+              <label for="otpInput">Step B: Two-Factor Passcode (6-digit OTP):</label>
+              <div class="input-row">
+                <input 
+                  type="text" 
+                  id="otpInput" 
+                  placeholder="Enter 6-digit OTP code" 
+                  maxlength="8" 
+                  autocomplete="off"
+                >
+                <button type="button" class="btn-accent" id="verifyOtpBtn" onclick="verifyOtpCode()">
+                  Verify OTP
+                </button>
+              </div>
+              <div class="otp-simulation-pill" id="otpSimulatedBox" style="display: none;">
+                <span class="sim-icon">📱</span>
+                <span class="demo-tag">DEMO OTP – DEVELOPMENT ONLY</span>
+                <span>Code: <strong id="simulatedOtpDisplay">—</strong></span>
+                <button type="button" class="btn-copy-otp" onclick="autofillOtp()">Autofill</button>
+              </div>
+              <small id="otpStatusText" class="status-msg"></small>
+            </div>
+
+            <!-- Chosen Candidate Preview -->
+            <div class="selected-candidate-preview">
+              <label>Chosen Candidate:</label>
+              <div class="preview-box" id="selectedPreview">
+                <span class="placeholder-text">None selected yet (Click a candidate card above)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notification Banner -->
+          <div id="alertBox" class="alert hidden"></div>
+
+          <!-- Cryptographic Receipt Box (Shown after successful vote) -->
+          <div id="receiptBox" class="receipt-card hidden">
+            <div class="receipt-header">
+              <span class="icon">🛡️</span>
+              <h3>OFFICIAL CRYPTOGRAPHIC BALLOT RECEIPT</h3>
+              <span class="badge-verified">Digitally Counted</span>
+            </div>
+            <p class="receipt-note">Your ballot has been decoupled from your identity and securely recorded. Retain your Receipt Token for independent audit verification:</p>
+            <div class="token-display">
+              <span class="token-label">Ballot Token:</span>
+              <code id="receiptTokenCode">BLT-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code>
+              <button type="button" class="btn-copy" onclick="copyReceiptToken()">Copy</button>
+            </div>
+            <div class="receipt-footer">
+              <span>Timestamp: <strong id="receiptTimestamp">—</strong></span>
+              <span>Ballot Secrecy: <strong>GUARANTEED</strong></span>
+            </div>
+          </div>
+
+          <div class="submit-row">
+            <button type="submit" class="btn-primary" id="castVoteBtn">
+              <span class="btn-icon">🗳️</span> Submit Official Secret Ballot
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Section 3: Anonymous Ballot Receipt Verifier -->
+      <section class="section receipt-verifier-section">
+        <div class="section-header">
+          <h2>3. Anonymous Ballot Verifier</h2>
+          <span class="secure-badge">🛡️ Mathematical Secrecy Verification</span>
+        </div>
+        <p class="text-muted" style="margin-bottom: 16px;">
+          Enter any cryptographic Receipt Token (<code>BLT-...</code>) to independently verify that your ballot is recorded in the official tamper-evident ballot box, without exposing your candidate choice.
+        </p>
+        <div class="verifier-input-row">
+          <input type="text" id="verifyTokenInput" placeholder="Paste your BLT-... receipt token here" autocomplete="off">
+          <button type="button" class="btn-secondary" onclick="verifyReceiptTokenAction()">
+            🔍 Verify Inclusion in Ballot Box
+          </button>
+        </div>
+        <div id="verifyResultBox" class="verifier-result-card hidden">
+          <!-- Populated by app.js -->
+        </div>
+      </section>
+
+      <!-- Section 4: Live Results & Real-Time Analytics -->
+      <section class="section">
+        <div class="section-header">
+          <h2>4. Live Election Results & Analytics</h2>
+          <div class="header-controls">
+            <span class="live-pill"><span class="dot"></span> Live Stream Active</span>
+            <button type="button" class="btn-refresh" onclick="loadResults()" title="Refresh Results">
+              ↻ Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Winner Announcement Banner (Visible when results declared) -->
+        <div id="winnerBanner" class="winner-banner hidden" onclick="openWinnerModal()">
+          <span class="winner-banner-icon">🏆</span>
+          <div class="winner-banner-text">
+            <strong>OFFICIAL WINNER DECLARED: <span id="winnerBannerName">—</span></strong>
+            <span>Click here to view official winner announcement and celebration declaration.</span>
+          </div>
+          <button type="button" class="winner-banner-btn">View Winner ➔</button>
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">Total Votes Cast</span>
+            <span class="stat-value" id="totalVotesCount">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Leading Candidate</span>
+            <span class="stat-value leader" id="leadingCandidateName">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Total Registered Roll</span>
+            <span class="stat-value file-status" id="totalRegisteredCount">0 Voters</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Voter Turnout</span>
+            <span class="stat-value" id="turnoutPercentage">0.0%</span>
+          </div>
+        </div>
+
+        <!-- Animated Bar Chart -->
+        <div class="chart-wrapper">
+          <div class="chart-header">
+            <span class="chart-title">Candidate Vote Distribution & Percentage Share</span>
+            <span class="chart-legend" id="resultsSealedLegend">Anonymous ballots aggregated in memory</span>
+          </div>
+          
+          <div class="results-bars" id="resultsBars">
+            <!-- Dynamically populated by app.js -->
+          </div>
+
+          <!-- Visual Scale Markers -->
+          <div class="chart-scale">
+            <span>0%</span>
+            <span>25%</span>
+            <span>50%</span>
+            <span>75%</span>
+            <span>100%</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-links">
+        <a href="/">Voter Dashboard</a>
+        <span>•</span>
+        <a href="/admin.html">Administrator Portal</a>
+        <span>•</span>
+        <a href="/api/admin/report/pdf" id="footerPdfLink" target="_blank">Download PDF Report</a>
+        <span>•</span>
+        <a href="/api/admin/report/csv" id="footerCsvLink" target="_blank">Download CSV Report</a>
+      </div>
+      <p>AAYOG_CHUNAV 3.0 • Multi-Election Management Platform • Pure C POSIX TCP Sockets & OpenSSL TLS 1.2/1.3</p>
+      <p class="text-muted">Strict Ballot Secrecy • Decoupled Anonymous Ballots • Salted OTP 2FA • SHA-256 HMAC Audit Ledger</p>
+    </footer>
+    <!-- Winner Announcement Modal -->
+    <div id="winnerModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="winnerModalTitle">
+      <div class="winner-modal-card">
+        <div class="winner-modal-header">
+          <div class="winner-crown-wrapper">
+            <span class="winner-crown">🏆</span>
+          </div>
+          <h2 id="winnerModalTitle">OFFICIAL ELECTION RESULTS DECLARED</h2>
+          <p id="winnerElectionTitle" class="winner-election-sub">—</p>
+        </div>
+        <div id="winnerModalBody" class="winner-modal-body">
+          <!-- Dynamically populated by app.js -->
+        </div>
+        <div class="winner-modal-actions">
+          <button type="button" class="btn-primary" onclick="closeWinnerModal()">Close & View Full Breakdown</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

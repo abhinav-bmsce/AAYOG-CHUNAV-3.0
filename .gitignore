@@ -1,0 +1,21 @@
+# Certificates and private keys
+certs/
+*.key
+*.pem
+
+# Voter and election data
+data/
+data_backup_v2/
+backups/
+voters.txt
+votes.txt
+
+# Logs
+*.log
+
+# Compiled binaries
+server
+client
+
+# macOS
+.DS_Store

@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AAYOG_CHUNAV 3.0 - Administrator Portal</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body class="admin-body">
+  <!-- Login Screen Overlay (Shown when unauthenticated) -->
+  <div id="adminLoginModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-badge-icon">🛡️</div>
+        <h2>Election Administrator Portal</h2>
+        <p class="text-muted">AAYOG_CHUNAV 3.0 • Restricted Official Access</p>
+      </div>
+      <form id="adminLoginForm" onsubmit="handleAdminLogin(event)">
+        <div class="form-group">
+          <label for="adminUsername">Username</label>
+          <input type="text" id="adminUsername" value="admin" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="adminPassword">Password</label>
+          <input type="password" id="adminPassword" value="Admin@Aayog2026#" required autocomplete="current-password">
+        </div>
+        <div class="form-group">
+          <label for="adminOtp">Administrator 2FA Passcode</label>
+          <input type="text" id="adminOtp" value="888999" placeholder="Enter 6-digit Admin 2FA Code (Demo: 888999)" required>
+          <small class="text-muted">Default Credentials: <code>admin</code> / <code>Admin@Aayog2026#</code> / 2FA: <code>888999</code></small>
+        </div>
+        <div id="loginAlert" class="alert hidden"></div>
+        <div class="modal-actions">
+          <button type="submit" class="btn-primary full-width" id="loginBtn">Authenticate & Enter Portal</button>
+        </div>
+        <div class="mtls-info-box">
+          <span class="icon">📜</span>
+          <span>Clients with verified mTLS certificate bypass password/2FA automatically.</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Dashboard (Shown when authenticated) -->
+  <div class="admin-app-container" id="adminDashboard" style="display: none;">
+    <!-- Top Navigation Bar -->
+    <header class="navbar admin-navbar">
+      <div class="brand">
+        <div class="brand-icon admin-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1>AAYOG_CHUNAV 3.0 <span class="badge-role">CHIEF ELECTION OFFICER</span></h1>
+          <p class="subtitle">Multi-Election Governance, Secrecy Auditing, Backup & Recovery</p>
+        </div>
+      </div>
+      <div class="nav-right">
+        <!-- Global Election Scope Selector -->
+        <div class="admin-scope-selector">
+          <label for="adminElectionScope">Context:</label>
+          <select id="adminElectionScope" onchange="onAdminScopeChange(this.value)">
+            <option value="1">Election #1</option>
+          </select>
+        </div>
+        <div class="status-pill-group">
+          <span class="pill-secure"><span class="dot"></span> TLS 1.3 Active</span>
+          <span class="pill-ip" id="adminIpBadge">IP: Allowlisted</span>
+        </div>
+        <a href="/" class="btn-secondary" target="_blank">Voter Portal ↗</a>
+        <button type="button" class="btn-danger-outline" onclick="handleAdminLogout()">Logout</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="admin-tabs">
+      <button type="button" class="tab-btn active" onclick="switchTab('overview')">📊 Overview & Live</button>
+      <button type="button" class="tab-btn" onclick="switchTab('elections')">🏛️ All Elections Hub</button>
+      <button type="button" class="tab-btn" onclick="switchTab('candidates')">🗳️ Candidates</button>
+      <button type="button" class="tab-btn" onclick="switchTab('voters')">👥 Voter Management</button>
+      <button type="button" class="tab-btn" onclick="switchTab('booths')">📍 Polling Booths</button>
+      <button type="button" class="tab-btn" onclick="switchTab('analytics')">📈 Analytics & Results</button>
+      <button type="button" class="tab-btn" onclick="switchTab('security')">🚨 Security & IP</button>
+      <button type="button" class="tab-btn" onclick="switchTab('audit')">📜 Audit Ledger</button>
+      <button type="button" class="tab-btn" onclick="switchTab('backups')">💾 Backup & Restore</button>
+      <button type="button" class="tab-btn" onclick="switchTab('reports')">📑 Export Reports</button>
+    </div>
+
+    <!-- TAB 1: OVERVIEW -->
+    <div class="tab-pane active" id="pane-overview">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Total Registered Roll</span>
+          <span class="stat-value" id="ovTotalReg">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Total Ballots Cast</span>
+          <span class="stat-value" id="ovTotalVotes">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Eligible Remaining</span>
+          <span class="stat-value" id="ovRemaining">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Turnout Rate</span>
+          <span class="stat-value text-accent" id="ovTurnout">0.0%</span>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <!-- Live Election State Box -->
+        <div class="admin-card">
+          <div class="card-header-row">
+            <h3>Election Lifecycle State</h3>
+            <span class="badge" id="ovElectionState">ACTIVE</span>
+          </div>
+          <p class="text-muted" id="ovElectionTitle">Lok Sabha General Election 2026</p>
+          <div class="button-row" style="margin-top: 15px;">
+            <button type="button" class="btn-success" onclick="setElectionState('ACTIVE')">▶ Start / Resume</button>
+            <button type="button" class="btn-warning" onclick="setElectionState('PAUSED')">⏸ Pause</button>
+            <button type="button" class="btn-danger" onclick="setElectionState('CLOSED')">⏹ Close</button>
+            <button type="button" class="btn-accent" onclick="setElectionState('DECLARED')">📢 Declare Results</button>
+          </div>
+        </div>
+
+        <!-- Security Summary Box -->
+        <div class="admin-card">
+          <div class="card-header-row">
+            <h3>Cryptographic Integrity Status</h3>
+            <span class="badge-verified" id="ovLedgerStatus">Ledger Intact</span>
+          </div>
+          <p class="text-muted">HMAC-SHA256 hash chaining ensures zero undetected tampering of voter records or anonymous ballots.</p>
+          <div class="button-row" style="margin-top: 15px;">
+            <button type="button" class="btn-secondary" onclick="runLedgerVerification()">Verify Ledger Chain</button>
+            <button type="button" class="btn-secondary" onclick="runFileIntegrityCheck()">Verify File Hashes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Candidate Results Breakdown -->
+      <div class="admin-card" style="margin-top: 20px;">
+        <div class="card-header-row">
+          <h3>Real-Time Candidate Standings</h3>
+          <span class="text-muted">Aggregated from Anonymous Ballots</span>
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Candidate Name</th>
+                <th>Political Party</th>
+                <th>Votes Received</th>
+                <th>Vote Share (%)</th>
+              </tr>
+            </thead>
+            <tbody id="ovCandidatesTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: ALL ELECTIONS HUB -->
+    <div class="tab-pane" id="pane-elections">
+      <div class="admin-card">
+        <div class="card-header-row">
+          <h3>Create New Independent Election</h3>
+          <span class="badge">Multi-Election Engine</span>
+        </div>
+        <form id="createElectionForm" onsubmit="handleCreateElection(event)" class="grid-form">
+          <div class="form-group">
+            <label>Election Title *</label>
+            <input type="text" id="newElTitle" placeholder="e.g. Student Council Election 2026" required>
+          </div>
+          <div class="form-group">
+            <label>Election Type *</label>
+            <select id="newElType">
+              <option value="College">College</option>
+              <option value="Department">Department</option>
+              <option value="Club">Club</option>
+              <option value="Student Council">Student Council</option>
+              <option value="General">General</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Description</label>
+            <input type="text" id="newElDesc" placeholder="Official description and purpose">
+          </div>
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" id="newElOtp" checked> Require Two-Factor Authentication (OTP)
+            </label>
+          </div>
+          <div class="form-actions full-width">
+            <button type="submit" class="btn-primary">➕ Create Independent Election</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="admin-card" style="margin-top: 20px;">
+        <div class="card-header-row">
+          <h3>Elections Registry</h3>
+          <button type="button" class="btn-refresh" onclick="loadAllElections()">↻ Refresh</button>
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Voters</th>
+                <th>Ballots</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="allElectionsTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: CANDIDATE MANAGEMENT -->
+    <div class="tab-pane" id="pane-candidates">
+      <div class="admin-card">
+        <div class="card-header-row">
+          <h3>Add Candidate to Election</h3>
+          <span class="badge" id="candLockNotice">Editable before voting starts</span>
+        </div>
+        <form id="addCandidateForm" onsubmit="handleAddCandidate(event)" class="grid-form">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="candName" placeholder="e.g. Priya Sharma" required>
+          </div>
+          <div class="form-group">
+            <label>Party / Affiliation *</label>
+            <input type="text" id="candParty" placeholder="e.g. Progressive Student Union" required>
+          </div>
+          <div class="form-group full-width">
+            <label>Candidate Photograph</label>
+            <div class="photo-upload-container" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <input type="file" id="candPhotoFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onchange="previewCandidateImage(event)" class="file-input">
+              <input type="text" id="candPhoto" placeholder="or enter photo path / URL (e.g. /images/others.png)" style="flex:1; min-width:240px;">
+            </div>
+            <div id="candPhotoPreviewWrap" class="photo-preview-wrap" style="display:none; margin-top:10px; align-items:center; gap:12px;">
+              <img id="candPhotoPreview" src="/images/others.png" alt="Candidate Preview" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #6366f1;">
+              <span id="candPhotoStatus" style="font-size:12px; color:#10b981; font-weight:600;">Image ready for upload</span>
+            </div>
+            <small class="text-muted">Supported formats: JPG, JPEG, PNG, WebP (Max size: 5MB)</small>
+          </div>
+          <div class="form-actions full-width">
+            <button type="submit" class="btn-primary" id="addCandBtn">➕ Register Candidate</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="admin-card" style="margin-top: 20px;">
+        <div class="card-header-row">
+          <h3>Configured Candidates (<span id="candScopeLabel">Election #1</span>)</h3>
+          <button type="button" class="btn-refresh" onclick="loadAdminCandidates()">↻ Refresh</button>
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Ballot #</th>
+                <th>Photo</th>
+                <th>Candidate Name</th>
+                <th>Party / Affiliation</th>
+                <th>Votes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminCandidatesTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: VOTER MANAGEMENT -->
+    <div class="tab-pane" id="pane-voters">
+      <div class="overview-grid">
+        <!-- Add Voter Card -->
+        <div class="admin-card">
+          <div class="card-header-row">
+            <h3>Add Individual Voter</h3>
+            <span class="badge">Election Roll</span>
+          </div>
+          <form id="addVoterForm" onsubmit="handleAddVoter(event)">
+            <div class="form-group">
+              <label>Voter ID (e.g. V101, STU-2026-01) *</label>
+              <input type="text" id="addVoterId" placeholder="Unique Voter ID" required>
+            </div>
+            <div class="form-group">
+              <label>Full Name *</label>
+              <input type="text" id="addVoterName" placeholder="Voter Name" required>
+            </div>
+            <div class="form-group">
+              <label>Polling Booth Assignment *</label>
+              <select id="addVoterBooth">
+                <option value="1">Station 1</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-primary full-width">Add Voter to Roll</button>
+          </form>
+        </div>
+
+        <!-- Bulk CSV Import Card -->
+        <div class="admin-card">
+          <div class="card-header-row">
+            <h3>Bulk Voter CSV Import</h3>
+            <span class="badge">RFC-4180 Format</span>
+          </div>
+          <p class="text-muted">Import multiple voters. Format: <code>id,name,booth_id</code> (one per line):</p>
+          <textarea id="bulkCsvText" rows="5" class="code-textarea" placeholder="V150,Ananya Roy,1&#10;V151,Kabir Mehta,2&#10;V152,Zoya Khan,1">V150,Ananya Roy,1
+V151,Kabir Mehta,2
+V152,Zoya Khan,1</textarea>
+          <div class="button-row" style="margin-top: 10px;">
+            <button type="button" class="btn-secondary" onclick="handleBulkImport()">📥 Import CSV Roll</button>
+            <button type="button" class="btn-refresh" onclick="loadSampleCsv()">Load Sample</button>
+            <button type="button" class="btn-refresh" onclick="clearCsvInput()">Clear</button>
+          </div>
+          <small id="bulkImportResult" class="status-msg"></small>
+        </div>
+      </div>
+
+      <!-- Voter Roll Table -->
+      <div class="admin-card" style="margin-top: 20px;">
+        <div class="card-header-row">
+          <h3>Registered Voters (<span id="voterScopeCount">0</span> Voters)</h3>
+          <div class="search-box">
+            <input type="text" id="voterSearchInput" placeholder="Search by ID or Name..." oninput="handleVoterSearch()">
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Voter ID</th>
+                <th>Full Name</th>
+                <th>Booth</th>
+                <th>Status</th>
+                <th>Participation Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="votersTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: POLLING BOOTHS -->
+    <div class="tab-pane" id="pane-booths">
+      <div class="admin-card">
+        <div class="card-header-row">
+          <h3>Create Polling Booth</h3>
+          <span class="badge">Station Management</span>
+        </div>
+        <form id="addBoothForm" onsubmit="handleAddBooth(event)" class="grid-form">
+          <div class="form-group">
+            <label>Booth ID *</label>
+            <input type="number" id="boothIdInput" min="1" placeholder="e.g. 1" required>
+          </div>
+          <div class="form-group">
+            <label>Booth Name *</label>
+            <input type="text" id="boothNameInput" placeholder="e.g. Main Auditorium Station" required>
+          </div>
+          <div class="form-group full-width">
+            <label>Physical Location</label>
+            <input type="text" id="boothLocInput" placeholder="e.g. Block A, Ground Floor">
+          </div>
+          <div class="form-actions full-width">
+            <button type="submit" class="btn-primary">➕ Create Polling Booth</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="admin-card" style="margin-top: 20px;">
+        <div class="card-header-row">
+          <h3>Polling Booths & Turnout Tracking</h3>
+          <button type="button" class="btn-refresh" onclick="loadAdminBooths()">↻ Refresh</button>
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Booth ID</th>
+                <th>Booth Name</th>
+                <th>Location</th>
+                <th>Registered Voters</th>
+                <th>Ballots Cast</th>
+                <th>Turnout (%)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminBoothsTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: LIVE ANALYTICS & RESULTS -->
+    <div class="tab-pane" id="pane-analytics">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Leading Candidate</span>
+          <span class="stat-value leader" id="anLeaderName">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Lead Margin</span>
+          <span class="stat-value text-accent" id="anLeadMargin">0 votes</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Tie Status</span>
+          <span class="stat-value" id="anTieStatus">Clear Leader</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Results State</span>
+          <span class="stat-value" id="anResultsState">Sealed</span>
+        </div>
+      </div>
+
+      <div class="admin-card" style="margin-top: 20px;">
+        <div class="card-header-row">
+          <h3>Official Results Declaration Controls</h3>
+          <span class="badge">Election Commission Authorization</span>
+        </div>
+        <p class="text-muted">
+          Under strict election governance, candidates and live vote tallies remain hidden from unauthorized public access until officially declared by the Election Commission.
+        </p>
+        <div class="button-row" style="margin-top: 15px;">
+          <button type="button" class="btn-accent" onclick="declareOfficialResults()">📢 Officially Declare Results</button>
+          <button type="button" class="btn-secondary" onclick="exportCsvReport()">📥 Export CSV Report</button>
+          <button type="button" class="btn-secondary" onclick="exportPdfReport()">📑 Export PDF 1.4 Report</button>
+        </div>
+      </div>
+
+      <div class="admin-card" style="margin-top: 20px;">
+        <div class="card-header-row">
+          <h3>Full Candidate Standings</h3>
+          <button type="button" class="btn-refresh" onclick="loadAdminAnalytics()">↻ Refresh</button>
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Ballot #</th>
+                <th>Candidate Name</th>
+                <th>Affiliation</th>
+                <th>Votes</th>
+                <th>Share (%)</th>
+              </tr>
+            </thead>
+            <tbody id="anCandidatesTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: SECURITY ALERTS & IP ALLOWLIST -->
+    <div class="tab-pane" id="pane-security">
+      <div class="overview-grid">
+        <!-- Add IP Allowlist Card -->
+        <div class="admin-card">
+          <div class="card-header-row">
+            <h3>Administrative IP Allowlist</h3>
+            <span class="badge">Zero-Trust Network Access</span>
+          </div>
+          <form id="addIpForm" onsubmit="handleAddIp(event)">
+            <div class="form-group">
+              <label>Add Trusted Administrative IP (IPv4 or IPv6):</label>
+              <input type="text" id="newIpAddress" placeholder="e.g. 192.168.1.50 or ::1" required>
+            </div>
+            <button type="submit" class="btn-primary full-width">Add IP to Allowlist</button>
+            <small id="ipActionMsg" class="status-msg"></small>
+          </form>
+
+          <h4 style="margin-top: 20px; font-size: 13px; color: var(--text-muted);">Current Allowlisted IPs:</h4>
+          <ul id="allowlistUl" class="ip-list">
+            <!-- Dynamically populated -->
+          </ul>
+        </div>
+
+        <!-- File Integrity Check Card -->
+        <div class="admin-card">
+          <div class="card-header-row">
+            <h3>SHA-256 System File Baseline</h3>
+            <span class="badge-verified">Cryptographic Manifest</span>
+          </div>
+          <p class="text-muted">Compares server source code and critical data files against the SHA-256 cryptographic manifest to detect host compromise or unauthorized file manipulation.</p>
+          <button type="button" class="btn-secondary full-width" onclick="runFileIntegrityCheck()">Run SHA-256 Integrity Verification</button>
+          <pre id="fileIntegrityOutput" class="code-box" style="margin-top: 15px; max-height: 180px; overflow-y: auto;">Integrity check ready.</pre>
+        </div>
+      </div>
+
+      <!-- Security Intrusion Alerts Table -->
+      <div class="admin-card" style="margin-top: 20px;">
+        <div class="card-header-row">
+          <h3>Intrusion Detection & Suspicious Activity Alerts</h3>
+          <button type="button" class="btn-refresh" onclick="loadSecurityAlerts()">↻ Refresh Alerts</button>
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Severity</th>
+                <th>Alert Event</th>
+                <th>Client IP</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="alertsTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 8: AUDIT LOG LEDGER -->
+    <div class="tab-pane" id="pane-audit">
+      <div class="admin-card">
+        <div class="card-header-row">
+          <h3>Tamper-Evident HMAC-SHA256 Audit Ledger</h3>
+          <div class="button-row">
+            <button type="button" class="btn-secondary" onclick="runLedgerVerification()">🔍 Verify Ledger Chain</button>
+            <button type="button" class="btn-refresh" onclick="loadAuditLogs()">↻ Refresh</button>
+          </div>
+        </div>
+        <div id="ledgerVerifyResult" class="alert hidden" style="margin-bottom: 15px;"></div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Seq #</th>
+                <th>Timestamp</th>
+                <th>Event Type</th>
+                <th>Actor</th>
+                <th>Severity</th>
+                <th>Details</th>
+                <th>HMAC-SHA256 Signature</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 9: BACKUP & RECOVERY -->
+    <div class="tab-pane" id="pane-backups">
+      <div class="admin-card">
+        <div class="card-header-row">
+          <h3>Cryptographic Backup Management</h3>
+          <span class="badge">SHA-256 Integrity Verified</span>
+        </div>
+        <p class="text-muted">
+          Create complete, timestamped system snapshots including all multi-election data, voter rolls, anonymous ballots, and audit ledgers. Restorations automatically verify SHA-256 checksums before applying.
+        </p>
+        <div class="button-row" style="margin-top: 15px;">
+          <button type="button" class="btn-primary" onclick="handleCreateBackup()">💾 Create Verified System Backup</button>
+          <button type="button" class="btn-refresh" onclick="loadBackups()">↻ Refresh List</button>
+        </div>
+        <div id="backupActionResult" class="alert hidden" style="margin-top: 15px;"></div>
+      </div>
+
+      <div class="admin-card" style="margin-top: 20px;">
+        <div class="card-header-row">
+          <h3>Available Backups Archive</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Backup Filename</th>
+                <th>Created Date</th>
+                <th>Size</th>
+                <th>SHA-256 Checksum</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="backupsTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 10: REPORTS -->
+    <div class="tab-pane" id="pane-reports">
+      <div class="admin-card">
+        <div class="card-header-row">
+          <h3>Certified Official Election Reports</h3>
+          <span class="badge">RFC-4180 CSV & Pure-C PDF 1.4</span>
+        </div>
+        <p class="text-muted">Generate certified, tamper-evident election audit reports containing complete turnout metrics, candidate standings, and cryptographic ledger signatures.</p>
+        
+        <div class="reports-grid" style="margin-top: 20px;">
+          <div class="report-box">
+            <h4>📑 Pure-C PDF 1.4 Audit Document</h4>
+            <p>Generated natively in C without external document libraries. Fully formatted with typography, tabular candidate standings, and security checksums.</p>
+            <button type="button" class="btn-primary" onclick="exportPdfReport()">Download Official PDF Report</button>
+          </div>
+          <div class="report-box">
+            <h4>📊 Certified RFC-4180 CSV Report</h4>
+            <p>Standardized CSV document containing voter turnout, polling booth breakdown, candidate vote tallies, and audit verification status.</p>
+            <button type="button" class="btn-secondary" onclick="exportCsvReport()">Download Official CSV Report</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
